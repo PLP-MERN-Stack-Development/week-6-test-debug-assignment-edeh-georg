@@ -3,12 +3,17 @@ import mongoose from "mongoose";
 import { generateToken } from './server/src/lib/utils.js'
 import { create } from './server/src/models/post.model.js';
 import { _create } from './server/src/models/user.model.js'; 
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 
 let mongoServer;
 let userId;
 let token;
 let postId;
+
+// Setup in-memory MongoDB server before all tests
 
 beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -18,6 +23,7 @@ beforeAll(async () => {
     // Create a test user
     const user = await _create({
         username: 'testuser',
+        fullName: 'Test User',
         email: 'test@example.com',
         password: 'password123',
     });
