@@ -33,7 +33,7 @@ mern-testing/
 │   └── tests/              # Server-side tests
 │       ├── unit/           # Unit tests
 │       └── integration/    # Integration tests
-├── jest.config.js          # Jest configuration
+├── jest.config.mjs          # Jest configuration
 └── package.json            # Project dependencies
 ```
 

@@ -1,6 +1,6 @@
 tests:
-  - name: Check if jest.config.js exists
-    run: test -f jest.config.js
+  - name: Check if jest.config.mjs exists
+    run: test -f jest.config.mjs
     input: ""
     output: ""
     comparison: included
