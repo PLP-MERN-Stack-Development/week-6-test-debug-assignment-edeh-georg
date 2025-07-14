@@ -11,7 +11,7 @@ export default {
       testMatch: ['<rootDir>/server/tests/**/*.test.js'],
       moduleFileExtensions: ['js', 'mjs', 'json', 'node'],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-      setupFiles: ['<rootDir>/server/tests/setup/jest.env.js'],
+      // setupFiles: ['<rootDir>/server/tests/setup/jest.env.js'],
       coverageDirectory: '<rootDir>/coverage/server',
       collectCoverageFrom: [
         'server/src/**/*.js',

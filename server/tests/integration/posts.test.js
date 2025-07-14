@@ -2,11 +2,55 @@
 import request from 'supertest';
 import app from '../../src/app'
 import { generateToken } from '../../src/lib/utils.js';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 
 
-let token;
 let userId;
 let postId;
+
+// Setup in-memory MongoDB server before all tests
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoServer.createConnection(mongoUri);
+
+  // Create a test user
+  const user = await _create({
+    username: 'testuser',
+    email: 'test@example.com',
+    password: 'password123',
+  });
+  userId = user._id;
+  token = generateToken(user);
+
+  // Create a test post
+  const post = await create({
+    title: 'Test Post',
+    content: 'This is a test post content',
+    author: userId,
+    slug: 'test-post',
+  });
+  postId = post._id;
+});
+
+// Clean up after all tests
+afterAll(async () => {
+  await disconnect();
+  await mongoServer.stop();
+});
+
+// Clean up database between tests
+afterEach(async () => {
+  // Keep the test user and post, but clean up any other created data
+  const collections = connection.collections;
+  for (const key in collections) {
+    const collection = collections[key];
+    if (collection.collectionName !== 'users' && collection.collectionName !== 'posts') {
+      await collection.deleteMany({});
+    }
+  }
+});
+
 
 
 describe('POST /api/posts', () => {
