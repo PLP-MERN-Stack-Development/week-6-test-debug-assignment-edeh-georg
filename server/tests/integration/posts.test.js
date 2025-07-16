@@ -1,57 +1,44 @@
 // posts.test.js - Integration tests for posts API endpoints
 import request from 'supertest';
-import app from '../../src/app'
-import { generateToken } from '../../src/lib/utils.js';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose, { Types } from 'mongoose';
+import app from '../../src/app';
+import User from '../../src/models/User'; // Adjust path as needed
+import Post from '../../src/models/Post'; // Adjust path as needed
+import { generateToken } from '../../src/utils/auth'; // Adjust path as needed
 
-
+let mongoServer;
 let userId;
-let postId;
+let token;
+let testUser;
 
-// Setup in-memory MongoDB server before all tests
 beforeAll(async () => {
+  // Setup in-memory MongoDB
   mongoServer = await MongoMemoryServer.create();
+  await mongoServer.ensureInstance();
   const mongoUri = mongoServer.getUri();
-  await mongoServer.createConnection(mongoUri);
+  await mongoose.connect(mongoUri);
 
-  // Create a test user
-  const user = await _create({
+  // Create test user
+  testUser = await User.create({
     username: 'testuser',
     email: 'test@example.com',
     password: 'password123',
   });
-  userId = user._id;
-  token = generateToken(user);
 
-  // Create a test post
-  const post = await create({
-    title: 'Test Post',
-    content: 'This is a test post content',
-    author: userId,
-    slug: 'test-post',
-  });
-  postId = post._id;
+  userId = testUser._id;
+  token = generateToken(testUser);
 });
 
-// Clean up after all tests
 afterAll(async () => {
-  await disconnect();
+  await mongoose.disconnect();
   await mongoServer.stop();
 });
 
-// Clean up database between tests
-afterEach(async () => {
-  // Keep the test user and post, but clean up any other created data
-  const collections = connection.collections;
-  for (const key in collections) {
-    const collection = collections[key];
-    if (collection.collectionName !== 'users' && collection.collectionName !== 'posts') {
-      await collection.deleteMany({});
-    }
-  }
+beforeEach(async () => {
+  // Clean up posts before each test (keep user)
+  await Post.deleteMany({});
 });
-
-
 
 describe('POST /api/posts', () => {
   it('should create a new post when authenticated', async () => {
@@ -71,14 +58,14 @@ describe('POST /api/posts', () => {
     expect(res.body).toHaveProperty('_id');
     expect(res.body.title).toBe(newPost.title);
     expect(res.body.content).toBe(newPost.content);
-    expect(res.body.author).toBe(userId.toString());
+    expect(res.body.author.toString()).toBe(userId.toString());
   });
 
   it('should return 401 if not authenticated', async () => {
     const newPost = {
       title: 'Unauthorized Post',
       content: 'This should not be created',
-      category: Types.ObjectId().toString(),
+      category: 'technology',
     };
 
     const res = await request(app)
@@ -92,7 +79,7 @@ describe('POST /api/posts', () => {
     const invalidPost = {
       // Missing title
       content: 'This post is missing a title',
-      category: Types.ObjectId().toString(),
+      category: 'technology',
     };
 
     const res = await request(app)
@@ -105,151 +92,218 @@ describe('POST /api/posts', () => {
   });
 });
 
-// describe('GET /api/posts', () => {
-//   it('should return all posts', async () => {
-//     const res = await request(app).get('/api/posts');
+describe('GET /api/posts', () => {
+  let postId;
 
-//     expect(res.status).toBe(200);
-//     expect(Array.isArray(res.body)).toBeTruthy();
-//     expect(res.body.length).toBeGreaterThan(0);
-//   });
+  beforeEach(async () => {
+    // Create a test post for GET tests
+    const post = await Post.create({
+      title: 'Test Post',
+      content: 'This is a test post content',
+      author: userId,
+      category: 'technology',
+      slug: 'test-post',
+    });
+    postId = post._id;
+  });
 
-//   it('should filter posts by category', async () => {
-//     const categoryId = Types.ObjectId().toString();
-    
-//     // Create a post with specific category
-//     await create({
-//       title: 'Filtered Post',
-//       content: 'This post should be filtered by category',
-//       author: userId,
-//       category: categoryId,
-//       slug: 'filtered-post',
-//     });
+  it('should return all posts', async () => {
+    const res = await request(app).get('/api/posts');
 
-//     const res = await request(app)
-//       .get(`/api/posts?category=${categoryId}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBeTruthy();
+    expect(res.body.length).toBeGreaterThan(0);
+  });
 
-//     expect(res.status).toBe(200);
-//     expect(Array.isArray(res.body)).toBeTruthy();
-//     expect(res.body.length).toBeGreaterThan(0);
-//     expect(res.body[0].category).toBe(categoryId);
-//   });
+  it('should filter posts by category', async () => {
+    // Create a post with specific category
+    await Post.create({
+      title: 'Filtered Post',
+      content: 'This post should be filtered by category',
+      author: userId,
+      category: 'science',
+      slug: 'filtered-post',
+    });
 
-//   it('should paginate results', async () => {
-//     // Create multiple posts
-//     const posts = [];
-//     for (let i = 0; i < 15; i++) {
-//       posts.push({
-//         title: `Pagination Post ${i}`,
-//         content: `Content for pagination test ${i}`,
-//         author: userId,
-//         category: Types.ObjectId(),
-//         slug: `pagination-post-${i}`,
-//       });
-//     }
-//     await insertMany(posts);
+    const res = await request(app)
+      .get('/api/posts?category=science');
 
-//     const page1 = await request(app)
-//       .get('/api/posts?page=1&limit=10');
-    
-//     const page2 = await request(app)
-//       .get('/api/posts?page=2&limit=10');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBeTruthy();
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.body[0].category).toBe('science');
+  });
 
-//     expect(page1.status).toBe(200);
-//     expect(page2.status).toBe(200);
-//     expect(page1.body.length).toBe(10);
-//     expect(page2.body.length).toBeGreaterThan(0);
-//     expect(page1.body[0]._id).not.toBe(page2.body[0]._id);
-//   });
-// });
+  it('should paginate results', async () => {
+    // Create multiple posts
+    const posts = [];
+    for (let i = 0; i < 15; i++) {
+      posts.push({
+        title: `Pagination Post ${i}`,
+        content: `Content for pagination test ${i}`,
+        author: userId,
+        category: 'technology',
+        slug: `pagination-post-${i}`,
+      });
+    }
+    await Post.insertMany(posts);
 
-// describe('GET /api/posts/:id', () => {
-//   it('should return a post by ID', async () => {
-//     const res = await request(app)
-//       .get(`/api/posts/${postId}`);
+    const page1 = await request(app)
+      .get('/api/posts?page=1&limit=10');
 
-//     expect(res.status).toBe(200);
-//     expect(res.body._id).toBe(postId.toString());
-//     expect(res.body.title).toBe('Test Post');
-//   });
+    const page2 = await request(app)
+      .get('/api/posts?page=2&limit=10');
 
-//   it('should return 404 for non-existent post', async () => {
-//     const nonExistentId = Types.ObjectId();
-//     const res = await request(app)
-//       .get(`/api/posts/${nonExistentId}`);
+    expect(page1.status).toBe(200);
+    expect(page2.status).toBe(200);
+    expect(page1.body.length).toBe(10);
+    expect(page2.body.length).toBeGreaterThan(0);
+    expect(page1.body[0]._id).not.toBe(page2.body[0]._id);
+  });
+});
 
-//     expect(res.status).toBe(404);
-//   });
-// });
+describe('GET /api/posts/:id', () => {
+  let postId;
 
-// describe('PUT /api/posts/:id', () => {
-//   it('should update a post when authenticated as author', async () => {
-//     const updates = {
-//       title: 'Updated Test Post',
-//       content: 'This content has been updated',
-//     };
+  beforeEach(async () => {
+    const post = await Post.create({
+      title: 'Test Post',
+      content: 'This is a test post content',
+      author: userId,
+      category: 'technology',
+      slug: 'test-post',
+    });
+    postId = post._id;
+  });
 
-//     const res = await request(app)
-//       .put(`/api/posts/${postId}`)
-//       .set('Authorization', `Bearer ${token}`)
-//       .send(updates);
+  it('should return a post by ID', async () => {
+    const res = await request(app)
+      .get(`/api/posts/${postId}`);
 
-//     expect(res.status).toBe(200);
-//     expect(res.body.title).toBe(updates.title);
-//     expect(res.body.content).toBe(updates.content);
-//   });
+    expect(res.status).toBe(200);
+    expect(res.body._id).toBe(postId.toString());
+    expect(res.body.title).toBe('Test Post');
+  });
 
-//   it('should return 401 if not authenticated', async () => {
-//     const updates = {
-//       title: 'Unauthorized Update',
-//     };
+  it('should return 404 for non-existent post', async () => {
+    const nonExistentId = new Types.ObjectId();
+    const res = await request(app)
+      .get(`/api/posts/${nonExistentId}`);
 
-//     const res = await request(app)
-//       .put(`/api/posts/${postId}`)
-//       .send(updates);
+    expect(res.status).toBe(404);
+  });
+});
 
-//     expect(res.status).toBe(401);
-//   });
+describe('PUT /api/posts/:id', () => {
+  let postId;
 
-//   it('should return 403 if not the author', async () => {
-//     // Create another user
-//     const anotherUser = await _create({
-//       username: 'anotheruser',
-//       email: 'another@example.com',
-//       password: 'password123',
-//     });
-//     const anotherToken = generateToken(anotherUser);
+  beforeEach(async () => {
+    const post = await Post.create({
+      title: 'Test Post',
+      content: 'This is a test post content',
+      author: userId,
+      category: 'technology',
+      slug: 'test-post',
+    });
+    postId = post._id;
+  });
 
-//     const updates = {
-//       title: 'Forbidden Update',
-//     };
+  it('should update a post when authenticated as author', async () => {
+    const updates = {
+      title: 'Updated Test Post',
+      content: 'This content has been updated',
+    };
 
-//     const res = await request(app)
-//       .put(`/api/posts/${postId}`)
-//       .set('Authorization', `Bearer ${anotherToken}`)
-//       .send(updates);
+    const res = await request(app)
+      .put(`/api/posts/${postId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(updates);
 
-//     expect(res.status).toBe(403);
-//   });
-// });
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe(updates.title);
+    expect(res.body.content).toBe(updates.content);
+  });
 
-// describe('DELETE /api/posts/:id', () => {
-//   it('should delete a post when authenticated as author', async () => {
-//     const res = await request(app)
-//       .delete(`/api/posts/${postId}`)
-//       .set('Authorization', `Bearer ${token}`);
+  it('should return 401 if not authenticated', async () => {
+    const updates = {
+      title: 'Unauthorized Update',
+    };
 
-//     expect(res.status).toBe(200);
-    
-//     // Verify post is deleted
-//     const deletedPost = await findById(postId);
-//     expect(deletedPost).toBeNull();
-//   });
+    const res = await request(app)
+      .put(`/api/posts/${postId}`)
+      .send(updates);
 
-//   it('should return 401 if not authenticated', async () => {
-//     const res = await request(app)
-//       .delete(`/api/posts/${postId}`);
+    expect(res.status).toBe(401);
+  });
 
-//     expect(res.status).toBe(401);
-//   });
-// }); 
+  it('should return 403 if not the author', async () => {
+    // Create another user
+    const anotherUser = await User.create({
+      username: 'anotheruser',
+      email: 'another@example.com',
+      password: 'password123',
+    });
+    const anotherToken = generateToken(anotherUser);
+
+    const updates = {
+      title: 'Forbidden Update',
+    };
+
+    const res = await request(app)
+      .put(`/api/posts/${postId}`)
+      .set('Authorization', `Bearer ${anotherToken}`)
+      .send(updates);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('DELETE /api/posts/:id', () => {
+  let postId;
+
+  beforeEach(async () => {
+    const post = await Post.create({
+      title: 'Test Post',
+      content: 'This is a test post content',
+      author: userId,
+      category: 'technology',
+      slug: 'test-post',
+    });
+    postId = post._id;
+  });
+
+  it('should delete a post when authenticated as author', async () => {
+    const res = await request(app)
+      .delete(`/api/posts/${postId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+
+    // Verify post is deleted
+    const deletedPost = await Post.findById(postId);
+    expect(deletedPost).toBeNull();
+  });
+
+  it('should return 401 if not authenticated', async () => {
+    const res = await request(app)
+      .delete(`/api/posts/${postId}`);
+
+    expect(res.status).toBe(401);
+  });
+
+  it('should return 403 if not the author', async () => {
+    // Create another user
+    const anotherUser = await User.create({
+      username: 'anotheruser',
+      email: 'another@example.com',
+      password: 'password123',
+    });
+    const anotherToken = generateToken(anotherUser);
+
+    const res = await request(app)
+      .delete(`/api/posts/${postId}`)
+      .set('Authorization', `Bearer ${anotherToken}`);
+
+    expect(res.status).toBe(403);
+  });
+});
