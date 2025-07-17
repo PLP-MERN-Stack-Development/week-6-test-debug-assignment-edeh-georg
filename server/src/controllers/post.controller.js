@@ -128,13 +128,87 @@ export const sendPost = async (req, res) => {
 
 export const updateUserPost = async (req, res) => {
     try {
-        const values = req.body;
-        if (!values){
+        const postId = req.params.id;
+        const { title, content, category, image } = req.body;
+        if (!title && !content && !category && !image){
             return res.status(400).json({"error": "Update request must contain values to be updated"});
         }
         
+        const existingPost = await Post.findById(postId);
+        if (!existingPost) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
 
+        if (existingPost.author.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: 'Not authorized to update this post' });
+          }
+
+        let imageUrl = existingPost.image;
+        if (image) {
+            const uploadResponse = await cloudinary.uploader.upload(image);
+            imageUrl = uploadResponse.secure_url;
+        }
+
+        const slug = title ? slugify(title, { lower: true }) : existingPost.slug;
+
+        const updatedPost = await Post.findByIdAndUpdate(
+            postId,
+            {
+                title: title || existingPost.title,
+                content: content || existingPost.content,
+                category: category || existingPost.category,
+                image: imageUrl,
+                slug: slug,
+                updatedAt: new Date()
+            },
+            {
+                new: true,
+                runValidators: true 
+            }
+        );
+
+        res.status(200).json(updatedPost);
     } catch (error) {
-        
+        console.error("Error in updatePost controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
     }    
 }
+
+export const deleteUserPost = async (req, res) => {
+    try {
+        const postId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).json({ error: 'Invalid post ID format' });
+        }
+
+        const existingPost = await Post.findById(postId);
+        if (!existingPost) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        if (existingPost.author.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: 'Not authorized to delete this post' });
+        }
+
+        if (existingPost.image) {
+            try {
+                const publicId = existingPost.image.split('/').pop().split('.')[0];
+                await cloudinary.uploader.destroy(publicId);
+            } catch (imageError) {
+                console.warn('Failed to delete image from cloudinary:', imageError);
+            }
+        }
+
+        await Post.findByIdAndDelete(postId);
+
+        res.status(200).json({
+            message: 'Post deleted successfully',
+            deletedPostId: postId
+        });
+
+    } catch (error) {
+        console.error("Error in deletePost controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+  };

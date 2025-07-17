@@ -200,7 +200,6 @@ describe('GET /api/posts/:id', () => {
       .get(`/api/message/posts/${nonExistentId}`)
       .set('Authorization', `Bearer ${token}`);
 
-    console.log('RESPONSE STATUS', res, 'TOKEN', token);
     expect(res.status).toBe(404);
   });
 
@@ -249,7 +248,7 @@ describe('PUT /api/posts/:id', () => {
     };
 
     const res = await request(app)
-      .put(`/api/posts/${postId}`)
+      .put(`/api/message/posts/${postId}`)
       .send(updates);
 
     expect(res.status).toBe(401);
@@ -270,7 +269,7 @@ describe('PUT /api/posts/:id', () => {
     };
 
     const res = await request(app)
-      .put(`/api/posts/${postId}`)
+      .put(`/api/message/posts/${postId}`)
       .set('Authorization', `Bearer ${anotherToken}`)
       .send(updates);
 
@@ -297,7 +296,7 @@ describe('PUT /api/posts/:id', () => {
     };
 
     const res = await request(app)
-      .put(`/api/posts/${postId}`)
+      .put(`/api/message/posts/${postId}`)
       .set('Authorization', `Bearer ${token}`)
       .send(invalidUpdates);
 
@@ -322,7 +321,7 @@ describe('DELETE /api/posts/:id', () => {
 
   it('should delete a post when authenticated as author', async () => {
     const res = await request(app)
-      .delete(`/api/posts/${postId}`)
+      .delete(`/api/message/posts/${postId}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
@@ -334,7 +333,7 @@ describe('DELETE /api/posts/:id', () => {
 
   it('should return 401 if not authenticated', async () => {
     const res = await request(app)
-      .delete(`/api/posts/${postId}`);
+      .delete(`/api/message/posts/${postId}`);
 
     expect(res.status).toBe(401);
   });
@@ -343,14 +342,14 @@ describe('DELETE /api/posts/:id', () => {
     // Create another user with unique email
     const anotherUser = await User.create({
       fullName: 'Another User',
-      username: `anotheruser-${Date.now()}`,
+      username: `anotheruser33`,
       email: `another-delete-${Date.now()}@example.com`,
       password: 'password123',
     });
     const anotherToken = generateToken(anotherUser);
 
     const res = await request(app)
-      .delete(`/api/posts/${postId}`)
+      .delete(`/api/message/posts/${postId}`)
       .set('Authorization', `Bearer ${anotherToken}`);
 
     expect(res.status).toBe(403);
@@ -359,7 +358,7 @@ describe('DELETE /api/posts/:id', () => {
   it('should return 404 for non-existent post', async () => {
     const nonExistentId = new Types.ObjectId();
     const res = await request(app)
-      .delete(`/api/posts/${nonExistentId}`)
+      .delete(`/api/message/posts/${nonExistentId}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(404);
@@ -367,7 +366,7 @@ describe('DELETE /api/posts/:id', () => {
 
   it('should return 400 for invalid ObjectId', async () => {
     const res = await request(app)
-      .delete('/api/posts/invalid-id')
+      .delete('/api/message/posts/invalid-id')
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(400);

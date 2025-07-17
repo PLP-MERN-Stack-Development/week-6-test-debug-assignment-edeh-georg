@@ -1,7 +1,7 @@
 import express from "express";
 
 import { protectRoute } from "../middleware/auth.middleware.js";
-import { getUsersForSidebar, getPosts, getPostsByUser, sendPost, getPostsById, updateUserPost } from "../controllers/post.controller.js";
+import { getUsersForSidebar, getPosts, getPostsByUser, sendPost, getPostsById, updateUserPost, deleteUserPost } from "../controllers/post.controller.js";
 
 const router = express.Router();
 
@@ -14,5 +14,7 @@ router.get("/posts/:id", protectRoute, getPostsById);
 router.post("/posts", protectRoute, sendPost);
 
 router.put("/posts/:id", protectRoute, updateUserPost);
+
+router.delete("/posts/:id", protectRoute, deleteUserPost);
 
 export default router;
