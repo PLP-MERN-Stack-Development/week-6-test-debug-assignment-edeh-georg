@@ -1,4 +1,5 @@
 // posts.test.js - Integration tests for posts API endpoints
+import dotenv from 'dotenv';
 import request from 'supertest';
 import mongoose, { Types } from 'mongoose';
 import app from '../../src/app';
@@ -9,6 +10,7 @@ import { generateToken } from '../../src/lib/utils.js';
 let userId;
 let token;
 let testUser;
+dotenv.config();
 
 beforeAll(async () => {
   // Connect to test database (fixed connection string)
@@ -52,7 +54,7 @@ describe('POST /api/posts', () => {
     };
 
     const res = await request(app)
-      .post('/api/posts')
+      .post('/api/message/posts')
       .set('Authorization', `Bearer ${token}`)
       .send(newPost);
 
@@ -71,7 +73,7 @@ describe('POST /api/posts', () => {
     };
 
     const res = await request(app)
-      .post('/api/posts')
+      .post('/api/message/posts')
       .send(newPost);
 
     expect(res.status).toBe(401);
@@ -85,7 +87,7 @@ describe('POST /api/posts', () => {
     };
 
     const res = await request(app)
-      .post('/api/posts')
+      .post('/api/message/posts')
       .set('Authorization', `Bearer ${token}`)
       .send(invalidPost);
 
@@ -110,7 +112,9 @@ describe('GET /api/posts', () => {
   });
 
   it('should return all posts', async () => {
-    const res = await request(app).get('/api/posts');
+    const res = await request(app)
+      .get('/api/message/user-posts')
+      .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBeTruthy();
@@ -123,17 +127,18 @@ describe('GET /api/posts', () => {
       title: 'Filtered Post',
       content: 'This post should be filtered by category',
       author: userId,
-      category: 'science',
+      category: 'technology',
       slug: 'filtered-post',
     });
 
     const res = await request(app)
-      .get('/api/posts?category=science');
-
+      .get('/api/message/user-posts?category=technology')
+      .set('Authorization', `Bearer ${token}`);
+    
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBeTruthy();
     expect(res.body.length).toBeGreaterThan(0);
-    expect(res.body[0].category).toBe('science');
+    expect(res.body[0].category).toBe('technology');
   });
 
   it('should paginate results', async () => {
@@ -149,8 +154,12 @@ describe('GET /api/posts', () => {
     await Post.insertMany(posts);
 
     const [page1, page2] = await Promise.all([
-      request(app).get('/api/posts?page=1&limit=10'),
-      request(app).get('/api/posts?page=2&limit=10')
+      request(app)
+        .get('/api/message/user-posts?page=1&limit=10')
+        .set('Authorization', `Bearer ${token}`),
+      request(app)
+        .get('/api/message/user-posts?page=2&limit=10')
+        .set('Authorization', `Bearer ${token}`),
     ]);
 
     expect(page1.status).toBe(200);
@@ -177,7 +186,8 @@ describe('GET /api/posts/:id', () => {
 
   it('should return a post by ID', async () => {
     const res = await request(app)
-      .get(`/api/posts/${postId}`);
+      .get(`/api/message/posts/${postId}`)
+      .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body._id).toBe(postId.toString());
@@ -187,14 +197,17 @@ describe('GET /api/posts/:id', () => {
   it('should return 404 for non-existent post', async () => {
     const nonExistentId = new Types.ObjectId();
     const res = await request(app)
-      .get(`/api/posts/${nonExistentId}`);
+      .get(`/api/message/posts/${nonExistentId}`)
+      .set('Authorization', `Bearer ${token}`);
 
+    console.log('RESPONSE STATUS', res, 'TOKEN', token);
     expect(res.status).toBe(404);
   });
 
   it('should return 400 for invalid ObjectId', async () => {
     const res = await request(app)
-      .get('/api/posts/invalid-id');
+      .get('/api/message/posts/invalid-id')
+      .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(400);
   });
@@ -221,7 +234,7 @@ describe('PUT /api/posts/:id', () => {
     };
 
     const res = await request(app)
-      .put(`/api/posts/${postId}`)
+      .put(`/api/message/posts/${postId}`)
       .set('Authorization', `Bearer ${token}`)
       .send(updates);
 

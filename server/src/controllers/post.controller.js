@@ -1,6 +1,8 @@
 import User from "../models/user.model.js";
 import Post from "../models/post.model.js"
 import cloudinary from "../lib/cloudinary.js";
+import slugify from "slugify";
+import mongoose from "mongoose";
 
 
 
@@ -17,7 +19,19 @@ export const getUsersForSidebar = async (req, res) => {
 
 export const getPosts = async (req, res) => {
     try {
-        const posts = await Post.find({}).populate('username', 'email');
+        const { page = 1, limit = 10 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+
+        if (pageNum < 1 || limitNum < 1 || limitNum > 100) {
+            return res.status(400).json({ error: "Invalid page or limit values" });
+        }
+
+        const skip = (pageNum - 1) * limitNum;
+
+        const posts = await Post.find({})
+            .skip(skip)
+            .limit(limitNum);
         res.status(200).json(posts);
     } catch (error) {
         console.error("Error in getPosts controller", error.message);
@@ -39,10 +53,42 @@ export const getPostsByUser = async (req, res) => {
 }
 
 
+export const getPostsById = async (req, res) => {
+    try {
+        const postId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).json({ error: 'Invalid post ID format' });
+        }
+
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        const data = {
+            '_id': postId,
+            'title': post.title
+        };
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error("Error in getPostsById controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
 export const sendPost = async (req, res) => {
     try {
         const { title, content, category, image } = req.body;
         const senderId = req.user._id;
+
+        if (!title || !content || !category){
+            return res.status(400).json({error: "Missing parameters validation failed"});
+        }
+
+        const slug = title ? slugify(title, { lower: true }) : undefined;
 
         let imageUrl;
         if (image) {
@@ -63,6 +109,7 @@ export const sendPost = async (req, res) => {
             title,
             content,
             category,
+            slug,
             author: senderId,
             image: imageUrl,
         });
@@ -77,3 +124,17 @@ export const sendPost = async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
+
+export const updateUserPost = async (req, res) => {
+    try {
+        const values = req.body;
+        if (!values){
+            return res.status(400).json({"error": "Update request must contain values to be updated"});
+        }
+        
+
+    } catch (error) {
+        
+    }    
+}
