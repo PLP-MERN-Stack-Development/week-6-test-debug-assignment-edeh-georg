@@ -1,8 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1752723224055" clover="3.2.0">
-  <project timestamp="1752723224055" name="All files">
-    <metrics statements="244" coveredstatements="132" conditionals="95" coveredconditionals="53" methods="22" coveredmethods="10" elements="361" coveredelements="195" complexity="0" loc="244" ncloc="244" packages="6" files="11" classes="11"/>
-    <package name="src">
+<coverage generated="1752724423415" clover="3.2.0">
+  <project timestamp="1752724423415" name="All files">
+    <metrics statements="258" coveredstatements="144" conditionals="105" coveredconditionals="61" methods="24" coveredmethods="12" elements="387" coveredelements="217" complexity="0" loc="258" ncloc="258" packages="7" files="12" classes="12"/>
+    <package name="client.src.components">
+      <metrics statements="14" coveredstatements="12" conditionals="10" coveredconditionals="8" methods="2" coveredmethods="2"/>
+      <file name="Button.jsx" path="/home/george/Desktop/development/plp/test-bug/client/src/components/Button.jsx">
+        <metrics statements="14" coveredstatements="12" conditionals="10" coveredconditionals="8" methods="2" coveredmethods="2"/>
+        <line num="4" count="1" type="stmt"/>
+        <line num="13" count="12" type="stmt"/>
+        <line num="14" count="12" type="stmt"/>
+        <line num="15" count="12" type="stmt"/>
+        <line num="16" count="12" type="cond" truecount="2" falsecount="0"/>
+        <line num="18" count="12" type="stmt"/>
+        <line num="26" count="12" type="stmt"/>
+        <line num="27" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="28" count="0" type="stmt"/>
+        <line num="29" count="0" type="stmt"/>
+        <line num="31" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="32" count="1" type="stmt"/>
+        <line num="36" count="12" type="stmt"/>
+        <line num="48" count="1" type="stmt"/>
+      </file>
+    </package>
+    <package name="server.src">
       <metrics statements="11" coveredstatements="11" conditionals="2" coveredconditionals="2" methods="1" coveredmethods="1"/>
       <file name="app.js" path="/home/george/Desktop/development/plp/test-bug/server/src/app.js">
         <metrics statements="11" coveredstatements="11" conditionals="2" coveredconditionals="2" methods="1" coveredmethods="1"/>
@@ -19,7 +39,7 @@
         <line num="30" count="1" type="stmt"/>
       </file>
     </package>
-    <package name="src.controllers">
+    <package name="server.src.controllers">
       <metrics statements="156" coveredstatements="67" conditionals="73" coveredconditionals="40" methods="12" coveredmethods="5"/>
       <file name="auth.controller.js" path="/home/george/Desktop/development/plp/test-bug/server/src/controllers/auth.controller.js">
         <metrics statements="61" coveredstatements="5" conditionals="23" coveredconditionals="0" methods="5" coveredmethods="0"/>
@@ -184,7 +204,7 @@
         <line num="212" count="0" type="stmt"/>
       </file>
     </package>
-    <package name="src.lib">
+    <package name="server.src.lib">
       <metrics statements="21" coveredstatements="12" conditionals="8" coveredconditionals="2" methods="5" coveredmethods="2"/>
       <file name="cloudinary.js" path="/home/george/Desktop/development/plp/test-bug/server/src/lib/cloudinary.js">
         <metrics statements="2" coveredstatements="2" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
@@ -217,7 +237,7 @@
         <line num="30" count="0" type="stmt"/>
       </file>
     </package>
-    <package name="src.middleware">
+    <package name="server.src.middleware">
       <metrics statements="18" coveredstatements="14" conditionals="12" coveredconditionals="9" methods="1" coveredmethods="1"/>
       <file name="auth.middleware.js" path="/home/george/Desktop/development/plp/test-bug/server/src/middleware/auth.middleware.js">
         <metrics statements="18" coveredstatements="14" conditionals="12" coveredconditionals="9" methods="1" coveredmethods="1"/>
@@ -241,7 +261,7 @@
         <line num="31" count="0" type="stmt"/>
       </file>
     </package>
-    <package name="src.models">
+    <package name="server.src.models">
       <metrics statements="24" coveredstatements="14" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="1"/>
       <file name="post.model.js" path="/home/george/Desktop/development/plp/test-bug/server/src/models/post.model.js">
         <metrics statements="17" coveredstatements="11" conditionals="0" coveredconditionals="0" methods="2" coveredmethods="1"/>
@@ -274,7 +294,7 @@
         <line num="48" count="0" type="stmt"/>
       </file>
     </package>
-    <package name="src.routes">
+    <package name="server.src.routes">
       <metrics statements="14" coveredstatements="14" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
       <file name="auth.route.js" path="/home/george/Desktop/development/plp/test-bug/server/src/routes/auth.route.js">
         <metrics statements="6" coveredstatements="6" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
