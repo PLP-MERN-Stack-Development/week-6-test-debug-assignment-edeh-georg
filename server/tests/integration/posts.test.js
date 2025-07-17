@@ -1,38 +1,40 @@
 // posts.test.js - Integration tests for posts API endpoints
 import request from 'supertest';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose, { Types } from 'mongoose';
 import app from '../../src/app';
-import User from '../../src/models/User'; // Adjust path as needed
-import Post from '../../src/models/Post'; // Adjust path as needed
-import { generateToken } from '../../src/utils/auth'; // Adjust path as needed
+import User from '../../src/models/user.model.js';
+import Post from '../../src/models/post.model.js';
+import { generateToken } from '../../src/lib/utils.js';
 
-let mongoServer;
 let userId;
 let token;
 let testUser;
 
 beforeAll(async () => {
-  // Setup in-memory MongoDB
-  mongoServer = await MongoMemoryServer.create();
-  await mongoServer.ensureInstance();
-  const mongoUri = mongoServer.getUri();
-  await mongoose.connect(mongoUri);
+  // Connect to test database (fixed connection string)
+  await mongoose.connect("mongodb://localhost:27017/test");
+
+  // Clean up any existing test data first
+  await User.deleteMany({});
+  await Post.deleteMany({});
 
   // Create test user
   testUser = await User.create({
+    fullName: 'Test User',
     username: 'testuser',
     email: 'test@example.com',
     password: 'password123',
   });
 
   userId = testUser._id;
-  token = generateToken(testUser);
+  token = generateToken(userId);
 });
 
 afterAll(async () => {
+  // Clean up all test data
+  await Post.deleteMany({});
+  await User.deleteMany({});
   await mongoose.disconnect();
-  await mongoServer.stop();
 });
 
 beforeEach(async () => {
@@ -135,24 +137,21 @@ describe('GET /api/posts', () => {
   });
 
   it('should paginate results', async () => {
-    // Create multiple posts
-    const posts = [];
-    for (let i = 0; i < 15; i++) {
-      posts.push({
-        title: `Pagination Post ${i}`,
-        content: `Content for pagination test ${i}`,
-        author: userId,
-        category: 'technology',
-        slug: `pagination-post-${i}`,
-      });
-    }
+    // Create multiple posts efficiently
+    const posts = Array.from({ length: 15 }, (_, i) => ({
+      title: `Pagination Post ${i}`,
+      content: `Content for pagination test ${i}`,
+      author: userId,
+      category: 'technology',
+      slug: `pagination-post-${i}`,
+    }));
+
     await Post.insertMany(posts);
 
-    const page1 = await request(app)
-      .get('/api/posts?page=1&limit=10');
-
-    const page2 = await request(app)
-      .get('/api/posts?page=2&limit=10');
+    const [page1, page2] = await Promise.all([
+      request(app).get('/api/posts?page=1&limit=10'),
+      request(app).get('/api/posts?page=2&limit=10')
+    ]);
 
     expect(page1.status).toBe(200);
     expect(page2.status).toBe(200);
@@ -191,6 +190,13 @@ describe('GET /api/posts/:id', () => {
       .get(`/api/posts/${nonExistentId}`);
 
     expect(res.status).toBe(404);
+  });
+
+  it('should return 400 for invalid ObjectId', async () => {
+    const res = await request(app)
+      .get('/api/posts/invalid-id');
+
+    expect(res.status).toBe(400);
   });
 });
 
@@ -237,10 +243,11 @@ describe('PUT /api/posts/:id', () => {
   });
 
   it('should return 403 if not the author', async () => {
-    // Create another user
+    // Create another user with unique email
     const anotherUser = await User.create({
+      fullName: 'Another User',
       username: 'anotheruser',
-      email: 'another@example.com',
+      email: `another-${Date.now()}@example.com`,
       password: 'password123',
     });
     const anotherToken = generateToken(anotherUser);
@@ -255,6 +262,34 @@ describe('PUT /api/posts/:id', () => {
       .send(updates);
 
     expect(res.status).toBe(403);
+  });
+
+  it('should return 404 for non-existent post', async () => {
+    const nonExistentId = new Types.ObjectId();
+    const updates = {
+      title: 'Update Non-existent Post',
+    };
+
+    const res = await request(app)
+      .put(`/api/posts/${nonExistentId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(updates);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('should return 400 for validation errors', async () => {
+    const invalidUpdates = {
+      title: '', // Empty title should fail validation
+    };
+
+    const res = await request(app)
+      .put(`/api/posts/${postId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(invalidUpdates);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
   });
 });
 
@@ -292,10 +327,11 @@ describe('DELETE /api/posts/:id', () => {
   });
 
   it('should return 403 if not the author', async () => {
-    // Create another user
+    // Create another user with unique email
     const anotherUser = await User.create({
-      username: 'anotheruser',
-      email: 'another@example.com',
+      fullName: 'Another User',
+      username: `anotheruser-${Date.now()}`,
+      email: `another-delete-${Date.now()}@example.com`,
       password: 'password123',
     });
     const anotherToken = generateToken(anotherUser);
@@ -305,5 +341,22 @@ describe('DELETE /api/posts/:id', () => {
       .set('Authorization', `Bearer ${anotherToken}`);
 
     expect(res.status).toBe(403);
+  });
+
+  it('should return 404 for non-existent post', async () => {
+    const nonExistentId = new Types.ObjectId();
+    const res = await request(app)
+      .delete(`/api/posts/${nonExistentId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('should return 400 for invalid ObjectId', async () => {
+    const res = await request(app)
+      .delete('/api/posts/invalid-id')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
   });
 });
